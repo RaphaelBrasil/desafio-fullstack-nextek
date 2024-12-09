@@ -28,6 +28,12 @@ const Login: React.FC = () => {
   return (
     <div className="min-h-screen flex justify-center items-center bg-gray-100">
       <div className="p-8 bg-white rounded shadow-lg w-full max-w-md">
+        <img
+          src="/logo.png"
+          alt="Logo"
+          className="mx-auto mb-6 w-64 bg-gray-800 p-2 rounded"
+        />
+
         <h1 className="text-2xl font-bold mb-6 text-center text-gray-800">
           Login
         </h1>
@@ -79,15 +85,15 @@ const Login: React.FC = () => {
           </div>
           <button
             type="submit"
-            className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+            className="w-full bg-gray-800 text-white p-2 rounded hover:bg-gray-600"
           >
             Entrar
           </button>
         </form>
         <div className="mt-4 text-center">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-500">
             Não tem uma conta?{" "}
-            <a href="/register" className="text-blue-500 hover:underline">
+            <a href="/register" className="text-blue-700 hover:underline">
               Registre-se aqui
             </a>
           </p>

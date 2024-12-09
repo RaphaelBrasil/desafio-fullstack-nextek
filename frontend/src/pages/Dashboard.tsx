@@ -31,7 +31,11 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
-      <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+      <img
+        src="/logo.png"
+        alt="Logo"
+        className="mx-auto mb-6 w-64 bg-gray-800 p-2 rounded"
+      />
       {loading ? (
         <div>Carregando...</div>
       ) : (
@@ -45,7 +49,7 @@ const Dashboard: React.FC = () => {
                 <p className="mt-2">{task.description}</p>
                 <p className="mt-2 text-gray-600">Status: {task.status}</p>
                 <button
-                  className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                  className="mt-4 bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-600"
                   onClick={() => navigate(`/edit-task/${task.id}`)}
                 >
                   Editar
