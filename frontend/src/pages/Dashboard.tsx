@@ -1,246 +1,432 @@
 import React, { useEffect, useState } from "react";
-import { getTasks, updateTask, deleteTask } from "../services/taskService";
-import { useNavigate } from "react-router-dom";
 import Modal from "react-modal";
+import { useNavigate } from "react-router-dom";
+import {
+	createTask,
+	getTasks,
+	updateTask,
+	deleteTask
+} from "../services/taskService";
 
+// Improved Task interface with optional id for new tasks
 interface Task {
-  id: number;
-  title: string;
-  description: string;
-  status: string;
+	id?: number;
+	title: string;
+	description: string;
+	status: "pendente" | "concluído";
 }
 
+// Set up Modal for the entire application
 Modal.setAppElement("#root");
 
 const Dashboard: React.FC = () => {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [search, setSearch] = useState<string>("");
-  const [filter, setFilter] = useState<string>("all");
-  const [selectedTasks, setSelectedTasks] = useState<number[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
-  const navigate = useNavigate();
+	const [tasks, setTasks] = useState<Task[]>([]);
+	const [loading, setLoading] = useState<boolean>(true);
+	const [search, setSearch] = useState<string>("");
+	const [filter, setFilter] = useState<"todas" | "concluído" | "pendente">(
+		"todas"
+	);
+	const [selectedTasks, setSelectedTasks] = useState<number[]>([]);
+	const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+	const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
+	const [currentTask, setCurrentTask] = useState<Task>({
+		title: "",
+		description: "",
+		status: "pendente"
+	});
 
-  useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        const data = await getTasks();
-        setTasks(data.data);
-      } catch (error) {
-        console.error("Erro ao carregar tarefas:", error);
-        navigate("/login");
-      }
-    };
+	const navigate = useNavigate();
 
-    fetchTasks();
-    setLoading(false);
-  }, [navigate]);
+	useEffect(() => {
+		const fetchTasks = async () => {
+			try {
+				const response = await getTasks();
+				setTasks(response.data);
+				setLoading(false);
+			} catch (error) {
+				console.error("Error loading tasks:", error);
+				navigate("/login");
+			}
+		};
 
-  const handleSelectTask = (taskId: number) => {
-    setSelectedTasks((prevSelected) =>
-      prevSelected.includes(taskId)
-        ? prevSelected.filter((id) => id !== taskId)
-        : [...prevSelected, taskId]
-    );
-  };
+		fetchTasks();
+	}, [navigate]);
 
-  const handleDeleteSelected = async () => {
-    try {
-      await Promise.all(selectedTasks.map((taskId) => deleteTask(taskId)));
-      setTasks((prevTasks) =>
-        prevTasks.filter((task) => !selectedTasks.includes(task.id))
-      );
-      setSelectedTasks([]);
-    } catch (error) {
-      alert(`Erro ao deletar tarefas. ${error}`);
-    }
-  };
+	const handleSelectTask = (taskId: number) => {
+		setSelectedTasks((prev) =>
+			prev.includes(taskId)
+				? prev.filter((id) => id !== taskId)
+				: [...prev, taskId]
+		);
+	};
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value);
-  };
+	const handleDeleteSelected = async () => {
+		try {
+			await Promise.all(
+				selectedTasks.map((taskId) => deleteTask(taskId))
+			);
+			setTasks((prev) =>
+				prev.filter((task) => !selectedTasks.includes(task.id!))
+			);
+			setSelectedTasks([]);
+		} catch (error) {
+			alert(`Error deleting tasks: ${error}`);
+		}
+	};
 
-  const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setFilter(e.target.value);
-  };
+	const handleCreateTask = async () => {
+		try {
+			const newTask = await createTask(
+				currentTask.title,
+				currentTask.description
+			);
+			setTasks((prev) => [...prev, newTask]);
+			setIsCreateModalOpen(false);
+			setCurrentTask({ title: "", description: "", status: "pendente" });
+		} catch (error) {
+			alert(`Error creating task: ${error}`);
+		}
+	};
 
-  const handleEditClick = (task: Task) => {
-    setTaskToEdit(task);
-    setIsModalOpen(true);
-  };
+	const handleUpdateTask = async () => {
+		if (currentTask.id) {
+			try {
+				await updateTask(
+					currentTask.id,
+					currentTask.title,
+					currentTask.description,
+					currentTask.status
+				);
+				setTasks((prev) =>
+					prev.map((task) =>
+						task.id === currentTask.id ? currentTask : task
+					)
+				);
+				setIsEditModalOpen(false);
+			} catch (error) {
+				alert(`Error updating task: ${error}`);
+			}
+		}
+	};
 
-  const handleSaveTask = async () => {
-    if (taskToEdit) {
-      try {
-        await updateTask(
-          taskToEdit.id,
-          taskToEdit.title,
-          taskToEdit.description,
-          taskToEdit.status
-        );
-        setTasks((prevTasks) =>
-          prevTasks.map((task) =>
-            task.id === taskToEdit.id ? taskToEdit : task
-          )
-        );
-        setIsModalOpen(false);
-      } catch (error) {
-        alert(`Erro ao atualizar tarefa. ${error}`);
-      }
-    }
-  };
+	const handleEditClick = (task: Task) => {
+		setCurrentTask(task);
+		setIsEditModalOpen(true);
+	};
 
-  const filteredTasks = tasks
-    .filter(
-      (task) =>
-        task.title.toLowerCase().includes(search.toLowerCase()) ||
-        task.description.toLowerCase().includes(search.toLowerCase())
-    )
-    .filter((task) => filter === "all" || task.status === filter);
+	const handleLogout = () => {
+		localStorage.removeItem("authToken");
+		navigate("/login");
+	};
 
-  return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <img
-        src="/logo.png"
-        alt="Logo"
-        className="mx-auto mb-6 w-64 bg-gray-800 p-2 rounded"
-      />
-      <div className="flex justify-between items-center mb-4">
-        <input
-          type="text"
-          className="w-1/2 p-2 border rounded"
-          placeholder="Pesquisar tarefas"
-          value={search}
-          onChange={handleSearchChange}
-        />
-        <select
-          className="ml-4 p-2 border rounded"
-          value={filter}
-          onChange={handleFilterChange}
-        >
-          <option value="all">Todos</option>
-          <option value="completed">Concluídas</option>
-          <option value="pending">Pendentes</option>
-        </select>
-        <button
-          className="ml-4 bg-red-500 text-white p-2 rounded hover:bg-red-600"
-          onClick={handleDeleteSelected}
-        >
-          Deletar Selecionadas
-        </button>
-      </div>
+	const filteredTasks = tasks
+		.filter(
+			(task) =>
+				task.title.toLowerCase().includes(search.toLowerCase()) ||
+				task.description.toLowerCase().includes(search.toLowerCase())
+		)
+		.filter((task) => filter === "todas" || task.status === filter);
 
-      {loading ? (
-        <div>Carregando...</div>
-      ) : (
-        <div className="space-y-4">
-          {filteredTasks.length === 0 ? (
-            <div className="text-center">Nenhuma tarefa encontrada.</div>
-          ) : (
-            filteredTasks.map((task) => (
-              <div
-                key={task.id}
-                className="bg-white p-4 rounded shadow flex justify-between items-center"
-              >
-                <div>
-                  <input
-                    type="checkbox"
-                    checked={selectedTasks.includes(task.id)}
-                    onChange={() => handleSelectTask(task.id)}
-                  />
-                  <h2 className="text-xl font-semibold">{task.title}</h2>
-                  <p className="mt-2">{task.description}</p>
-                  <p className="mt-2 text-gray-600">Status: {task.status}</p>
-                </div>
-                <button
-                  className="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-600"
-                  onClick={() => handleEditClick(task)}
-                >
-                  Editar
-                </button>
-              </div>
-            ))
-          )}
-        </div>
-      )}
+	const modalStyle = {
+		content: {
+			top: "50%",
+			left: "50%",
+			right: "auto",
+			bottom: "auto",
+			marginRight: "-50%",
+			transform: "translate(-50%, -50%)",
+			backgroundColor: "#f4f4f4",
+			borderRadius: "8px",
+			padding: "20px",
+			maxWidth: "500px",
+			width: "90%"
+		},
+		overlay: {
+			backgroundColor: "rgba(0, 0, 0, 0.5)"
+		}
+	};
 
-      {/* Modal */}
-      <Modal
-        isOpen={isModalOpen}
-        onRequestClose={() => setIsModalOpen(false)}
-        contentLabel="Editar Tarefa"
-        className="modal"
-        overlayClassName="overlay"
-      >
-        <h2 className="text-xl font-semibold mb-4">Editar Tarefa</h2>
-        {taskToEdit && (
-          <div>
-            <div className="mb-4">
-              <label
-                className="block text-sm font-medium text-gray-700"
-                htmlFor="title"
-              >
-                Título
-              </label>
-              <input
-                id="title"
-                type="text"
-                className="w-full border p-2 rounded"
-                value={taskToEdit.title}
-                onChange={(e) =>
-                  setTaskToEdit({ ...taskToEdit, title: e.target.value })
-                }
-              />
-            </div>
-            <div className="mb-4">
-              <label
-                className="block text-sm font-medium text-gray-700"
-                htmlFor="description"
-              >
-                Descrição
-              </label>
-              <textarea
-                id="description"
-                className="w-full border p-2 rounded"
-                value={taskToEdit.description}
-                onChange={(e) =>
-                  setTaskToEdit({ ...taskToEdit, description: e.target.value })
-                }
-              />
-            </div>
-            <div className="mb-4">
-              <label
-                className="block text-sm font-medium text-gray-700"
-                htmlFor="status"
-              >
-                Status
-              </label>
-              <select
-                id="status"
-                className="w-full border p-2 rounded"
-                value={taskToEdit.status}
-                onChange={(e) =>
-                  setTaskToEdit({ ...taskToEdit, status: e.target.value })
-                }
-              >
-                <option value="pending">Pendente</option>
-                <option value="completed">Concluída</option>
-              </select>
-            </div>
-            <div className="flex justify-end">
-              <button
-                className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-                onClick={handleSaveTask}
-              >
-                Salvar
-              </button>
-            </div>
-          </div>
-        )}
-      </Modal>
-    </div>
-  );
+	return (
+		<div className="min-h-screen bg-gray-100 p-6">
+			<img
+				src="/logo.png"
+				alt="Logo"
+				className="mx-auto mb-6 w-64 bg-gray-800 p-2 rounded"
+			/>
+
+			<div className="flex flex-wrap justify-between items-center mb-6 space-y-2 md:space-y-0">
+				<input
+					type="text"
+					className="w-full md:w-1/3 p-2 border rounded bg-white text-gray-800"
+					placeholder="Pesquisar"
+					value={search}
+					onChange={(e) => setSearch(e.target.value)}
+				/>
+
+				<select
+					className="w-full md:w-auto p-2 border rounded bg-white text-gray-800"
+					value={filter}
+					onChange={(e) =>
+						setFilter(
+							e.target.value as "todas" | "concluído" | "pendente"
+						)
+					}
+				>
+					<option value="todas">Todas</option>
+					<option value="concluído">Concluídas</option>
+					<option value="pendente">Pendentes</option>
+				</select>
+
+				<div className="flex space-x-2">
+					{selectedTasks.length === 0 ? (
+						<></>
+					) : (
+						<button
+							className="bg-red-500 text-white p-2 rounded hover:bg-red-600 disabled:opacity-50"
+							onClick={handleDeleteSelected}
+							disabled={selectedTasks.length === 0}
+						>
+							Excluir Selecionadas
+						</button>
+					)}
+
+					<button
+						className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+						onClick={() => setIsCreateModalOpen(true)}
+					>
+						Nova Tarefa{" "}
+					</button>
+
+					<button
+						className="bg-gray-500 text-white p-2 rounded hover:bg-gray-600"
+						onClick={handleLogout}
+					>
+						Logout
+					</button>
+				</div>
+			</div>
+
+			{loading ? (
+				<div className="text-center text-gray-600">Loading...</div>
+			) : (
+				<div className="space-y-4">
+					{filteredTasks.length === 0 ? (
+						<div className="text-center text-gray-600">
+							Nenhuma tarefa econtrada
+						</div>
+					) : (
+						filteredTasks.map((task) => (
+							<div
+								key={task.id}
+								className="bg-white p-4 rounded shadow flex justify-between items-center hover:bg-gray-50 transition-colors"
+							>
+								<div className="flex items-center space-x-4">
+									<input
+										type="checkbox"
+										checked={selectedTasks.includes(
+											task.id!
+										)}
+										onChange={() =>
+											handleSelectTask(task.id!)
+										}
+										className="form-checkbox"
+									/>
+									<div>
+										<h2 className="text-xl font-semibold text-gray-800">
+											{task.title}
+										</h2>
+										<p className="text-gray-600">
+											{task.description}
+										</p>
+										<span
+											className={`
+                                                inline-block mt-2 px-2 py-1 rounded text-sm
+                                                ${
+													task.status === "concluído"
+														? "bg-green-100 text-green-800"
+														: "bg-yellow-100 text-yellow-800"
+												}
+                                            `}
+										>
+											{task.status === "concluído"
+												? "Concluído"
+												: "Pendente"}
+										</span>
+									</div>
+								</div>
+								<button
+									className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600"
+									onClick={() => handleEditClick(task)}
+								>
+									Editar
+								</button>
+							</div>
+						))
+					)}
+				</div>
+			)}
+
+			{/* Edit Task Modal */}
+			<Modal
+				isOpen={isEditModalOpen}
+				onRequestClose={() => setIsEditModalOpen(false)}
+				style={modalStyle}
+				contentLabel="Editar Tarefa"
+			>
+				<h2 className="text-2xl font-bold mb-4 text-gray-800">
+					Editar Tarefa
+				</h2>
+				<div className="space-y-4">
+					<div>
+						<label
+							htmlFor="edit-title"
+							className="block text-gray-700 mb-2"
+						>
+							Título
+						</label>
+						<input
+							id="edit-title"
+							type="text"
+							className="w-full p-2 border rounded bg-white text-gray-800"
+							value={currentTask.title}
+							onChange={(e) =>
+								setCurrentTask((prev) => ({
+									...prev,
+									title: e.target.value
+								}))
+							}
+						/>
+					</div>
+					<div>
+						<label
+							htmlFor="edit-description"
+							className="block text-gray-700 mb-2"
+						>
+							Descrição
+						</label>
+						<textarea
+							id="edit-description"
+							className="w-full p-2 border rounded bg-white text-gray-800"
+							value={currentTask.description}
+							onChange={(e) =>
+								setCurrentTask((prev) => ({
+									...prev,
+									description: e.target.value
+								}))
+							}
+						/>
+					</div>
+					<div>
+						<label
+							htmlFor="edit-status"
+							className="block text-gray-700 mb-2"
+						>
+							Status
+						</label>
+						<select
+							id="edit-status"
+							className="w-full p-2 border rounded bg-white text-gray-800"
+							value={currentTask.status}
+							onChange={(e) =>
+								setCurrentTask((prev) => ({
+									...prev,
+									status: e.target.value as
+										| "pendente"
+										| "concluído"
+								}))
+							}
+						>
+							<option value="pendente">Pendente</option>
+							<option value="concluído">Concluído</option>
+						</select>
+					</div>
+					<div className="flex justify-end space-x-2">
+						<button
+							className="bg-gray-500 text-white p-2 rounded hover:bg-gray-600"
+							onClick={() => setIsEditModalOpen(false)}
+						>
+							Cancelar
+						</button>
+						<button
+							className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+							onClick={handleUpdateTask}
+						>
+							Salvar
+						</button>
+					</div>
+				</div>
+			</Modal>
+
+			{/* Create Task Modal */}
+			<Modal
+				isOpen={isCreateModalOpen}
+				onRequestClose={() => setIsCreateModalOpen(false)}
+				style={modalStyle}
+				contentLabel="Create New Task"
+			>
+				<h2 className="text-2xl font-bold mb-4 text-gray-800">
+					Nova Tarefa
+				</h2>
+				<div className="space-y-4">
+					<div>
+						<label
+							htmlFor="new-title"
+							className="block text-gray-700 mb-2"
+						>
+							Título
+						</label>
+						<input
+							id="new-title"
+							type="text"
+							className="w-full p-2 border rounded bg-white text-gray-800"
+							onChange={(e) =>
+								setCurrentTask((prev) => ({
+									...prev,
+									title: e.target.value,
+									description: e.target.value
+								}))
+							}
+							placeholder="Título"
+						/>
+					</div>
+					<div>
+						<label
+							htmlFor="new-description"
+							className="block text-gray-700 mb-2"
+						>
+							Descrição
+						</label>
+						<textarea
+							id="new-description"
+							className="w-full p-2 border rounded bg-white text-gray-800"
+							onChange={(e) =>
+								setCurrentTask((prev) => ({
+									...prev,
+									description: e.target.value
+								}))
+							}
+						/>
+					</div>
+
+					<div className="flex justify-end space-x-2">
+						<button
+							className="bg-gray-500 text-white p-2 rounded hover:bg-gray-600"
+							onClick={() => setIsCreateModalOpen(false)}
+						>
+							Cancelar
+						</button>
+						<button
+							className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+							onClick={handleCreateTask}
+							disabled={!currentTask.title.trim()}
+						>
+							Criar Tarefa
+						</button>
+					</div>
+				</div>
+			</Modal>
+		</div>
+	);
 };
 
 export default Dashboard;

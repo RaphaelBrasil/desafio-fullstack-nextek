@@ -1,20 +1,14 @@
 import React from "react";
-import { Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
+import { Navigate } from "react-router-dom";
+
 interface PrivateRouteProps {
-  children: JSX.Element;
+	children: React.ReactNode;
 }
 
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
-  const { isAuthenticated } = useAuth(); // Verifica se o usuário está autenticado
-  const location = useLocation();
+	const isAuthenticated = !!localStorage.getItem("authToken"); // Ou use o contexto adequado
 
-  if (!isAuthenticated) {
-    // Redireciona para o login se o usuário não estiver autenticado
-    return <Navigate to="/login" state={{ from: location }} />;
-  }
-
-  return children;
+	return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
 };
 
 export default PrivateRoute;
