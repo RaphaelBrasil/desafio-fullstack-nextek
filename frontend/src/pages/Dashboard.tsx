@@ -118,7 +118,6 @@ const Dashboard: React.FC = () => {
 		localStorage.removeItem("authToken");
 		navigate("/login");
 	};
-
 	const filteredTasks = tasks
 		.filter(
 			(task) =>
@@ -148,13 +147,38 @@ const Dashboard: React.FC = () => {
 
 	return (
 		<div className="min-h-screen bg-gray-100 p-6">
-			<img
-				src="/logo.png"
-				alt="Logo"
-				className="mx-auto mb-6 w-64 bg-gray-800 p-2 rounded"
-			/>
+			{/* Header */}
+			<header className="flex justify-between items-center mb-6 bg-gray-800 p-4 rounded shadow">
+				<img src="/logo.png" alt="Logo" className="w-32" />
+				<div className="flex flex-wrap justify-between gap-2">
+					{selectedTasks.length > 0 && (
+						<button
+							className="mt-2 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+							onClick={handleDeleteSelected}
+						>
+							Excluir Selecionadas
+						</button>
+					)}
 
+					<button
+						className="mt-2 bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200"
+						onClick={handleLogout}
+					>
+						Sair
+					</button>
+				</div>
+			</header>
+
+			{/* Search and Filter Controls */}
 			<div className="flex flex-wrap justify-between items-center mb-6 space-y-2 md:space-y-0">
+				<div className="flex space-x-2">
+					<button
+						className="bg-gray-800 text-white p-2 rounded hover:bg-gray-600"
+						onClick={() => setIsCreateModalOpen(true)}
+					>
+						Nova Tarefa
+					</button>
+				</div>
 				<input
 					type="text"
 					className="w-full md:w-1/3 p-2 border rounded bg-white text-gray-800"
@@ -176,43 +200,16 @@ const Dashboard: React.FC = () => {
 					<option value="concluído">Concluídas</option>
 					<option value="pendente">Pendentes</option>
 				</select>
-
-				<div className="flex space-x-2">
-					{selectedTasks.length === 0 ? (
-						<></>
-					) : (
-						<button
-							className="bg-red-500 text-white p-2 rounded hover:bg-red-600 disabled:opacity-50"
-							onClick={handleDeleteSelected}
-							disabled={selectedTasks.length === 0}
-						>
-							Excluir Selecionadas
-						</button>
-					)}
-
-					<button
-						className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-						onClick={() => setIsCreateModalOpen(true)}
-					>
-						Nova Tarefa{" "}
-					</button>
-
-					<button
-						className="bg-gray-500 text-white p-2 rounded hover:bg-gray-600"
-						onClick={handleLogout}
-					>
-						Logout
-					</button>
-				</div>
 			</div>
 
+			{/* Task Display */}
 			{loading ? (
 				<div className="text-center text-gray-600">Loading...</div>
 			) : (
 				<div className="space-y-4">
 					{filteredTasks.length === 0 ? (
 						<div className="text-center text-gray-600">
-							Nenhuma tarefa econtrada
+							Nenhuma tarefa encontrada
 						</div>
 					) : (
 						filteredTasks.map((task) => (
@@ -239,14 +236,11 @@ const Dashboard: React.FC = () => {
 											{task.description}
 										</p>
 										<span
-											className={`
-                                                inline-block mt-2 px-2 py-1 rounded text-sm
-                                                ${
-													task.status === "concluído"
-														? "bg-green-100 text-green-800"
-														: "bg-yellow-100 text-yellow-800"
-												}
-                                            `}
+											className={`inline-block mt-2 px-2 py-1 rounded text-sm ${
+												task.status === "concluído"
+													? "bg-green-100 text-green-800"
+													: "bg-yellow-100 text-yellow-800"
+											}`}
 										>
 											{task.status === "concluído"
 												? "Concluído"
@@ -255,7 +249,7 @@ const Dashboard: React.FC = () => {
 									</div>
 								</div>
 								<button
-									className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600"
+									className="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-600"
 									onClick={() => handleEditClick(task)}
 								>
 									Editar
@@ -276,85 +270,70 @@ const Dashboard: React.FC = () => {
 				<h2 className="text-2xl font-bold mb-4 text-gray-800">
 					Editar Tarefa
 				</h2>
-				<div className="space-y-4">
-					<div>
-						<label
-							htmlFor="edit-title"
-							className="block text-gray-700 mb-2"
-						>
-							Título
-						</label>
-						<input
-							id="edit-title"
-							type="text"
-							className="w-full p-2 border rounded bg-white text-gray-800"
-							value={currentTask.title}
-							onChange={(e) =>
-								setCurrentTask((prev) => ({
-									...prev,
-									title: e.target.value
-								}))
-							}
-						/>
-					</div>
-					<div>
-						<label
-							htmlFor="edit-description"
-							className="block text-gray-700 mb-2"
-						>
-							Descrição
-						</label>
-						<textarea
-							id="edit-description"
-							className="w-full p-2 border rounded bg-white text-gray-800"
-							value={currentTask.description}
-							onChange={(e) =>
-								setCurrentTask((prev) => ({
-									...prev,
-									description: e.target.value
-								}))
-							}
-						/>
-					</div>
-					<div>
-						<label
-							htmlFor="edit-status"
-							className="block text-gray-700 mb-2"
-						>
-							Status
-						</label>
+				<form
+					onSubmit={(e) => {
+						e.preventDefault();
+						handleUpdateTask();
+					}}
+					className="space-y-4"
+				>
+					<input
+						type="text"
+						value={currentTask.title}
+						onChange={(e) =>
+							setCurrentTask({
+								...currentTask,
+								title: e.target.value
+							})
+						}
+						placeholder="Título"
+						className="w-full p-2 border rounded"
+					/>
+					<textarea
+						value={currentTask.description}
+						onChange={(e) =>
+							setCurrentTask({
+								...currentTask,
+								description: e.target.value
+							})
+						}
+						placeholder="Descrição"
+						className="w-full p-2 border rounded"
+					/>
+					<div className="flex justify-between">
+						<label>Status:</label>
 						<select
-							id="edit-status"
-							className="w-full p-2 border rounded bg-white text-gray-800"
 							value={currentTask.status}
 							onChange={(e) =>
-								setCurrentTask((prev) => ({
-									...prev,
+								setCurrentTask({
+									...currentTask,
 									status: e.target.value as
 										| "pendente"
 										| "concluído"
-								}))
+								})
 							}
+							className="p-2 border rounded"
 						>
 							<option value="pendente">Pendente</option>
 							<option value="concluído">Concluído</option>
 						</select>
 					</div>
-					<div className="flex justify-end space-x-2">
+					<div className="mt-4 flex justify-end">
 						<button
-							className="bg-gray-500 text-white p-2 rounded hover:bg-gray-600"
+							type="button"
+							className="mr-2 bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
 							onClick={() => setIsEditModalOpen(false)}
 						>
 							Cancelar
 						</button>
 						<button
-							className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-							onClick={handleUpdateTask}
+							type="submit"
+							className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
 						>
 							Salvar
 						</button>
 					</div>
-				</div>
+				</form>
 			</Modal>
 
 			{/* Create Task Modal */}
@@ -362,68 +341,57 @@ const Dashboard: React.FC = () => {
 				isOpen={isCreateModalOpen}
 				onRequestClose={() => setIsCreateModalOpen(false)}
 				style={modalStyle}
-				contentLabel="Create New Task"
+				contentLabel="Nova Tarefa"
 			>
 				<h2 className="text-2xl font-bold mb-4 text-gray-800">
-					Nova Tarefa
+					Criar Nova Tarefa
 				</h2>
-				<div className="space-y-4">
-					<div>
-						<label
-							htmlFor="new-title"
-							className="block text-gray-700 mb-2"
-						>
-							Título
-						</label>
-						<input
-							id="new-title"
-							type="text"
-							className="w-full p-2 border rounded bg-white text-gray-800"
-							onChange={(e) =>
-								setCurrentTask((prev) => ({
-									...prev,
-									title: e.target.value,
-									description: e.target.value
-								}))
-							}
-							placeholder="Título"
-						/>
-					</div>
-					<div>
-						<label
-							htmlFor="new-description"
-							className="block text-gray-700 mb-2"
-						>
-							Descrição
-						</label>
-						<textarea
-							id="new-description"
-							className="w-full p-2 border rounded bg-white text-gray-800"
-							onChange={(e) =>
-								setCurrentTask((prev) => ({
-									...prev,
-									description: e.target.value
-								}))
-							}
-						/>
-					</div>
-
-					<div className="flex justify-end space-x-2">
+				<form
+					onSubmit={(e) => {
+						e.preventDefault();
+						handleCreateTask();
+					}}
+					className="space-y-4"
+				>
+					<input
+						type="text"
+						value={currentTask.title}
+						onChange={(e) =>
+							setCurrentTask({
+								...currentTask,
+								title: e.target.value
+							})
+						}
+						placeholder="Título"
+						className="w-full p-2 border rounded"
+					/>
+					<textarea
+						value={currentTask.description}
+						onChange={(e) =>
+							setCurrentTask({
+								...currentTask,
+								description: e.target.value
+							})
+						}
+						placeholder="Descrição"
+						className="w-full p-2 border rounded"
+					/>
+					<div className="mt-4 flex justify-end">
 						<button
-							className="bg-gray-500 text-white p-2 rounded hover:bg-gray-600"
+							type="button"
+							className="mr-2 bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
 							onClick={() => setIsCreateModalOpen(false)}
 						>
 							Cancelar
 						</button>
 						<button
-							className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-							onClick={handleCreateTask}
-							disabled={!currentTask.title.trim()}
+							type="submit"
+							className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
 						>
-							Criar Tarefa
+							Criar
 						</button>
 					</div>
-				</div>
+				</form>
 			</Modal>
 		</div>
 	);
